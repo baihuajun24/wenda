@@ -12,6 +12,7 @@ import chardet
 import os
 import sys
 import time
+import pandas as pd
 os.chdir(sys.path[0][:-8])
 
 from common import success_print, error_print
@@ -79,32 +80,16 @@ for root, dirs, files in os.walk(source_folder_path):
         all_files.append([root, file])
 success_print("文件列表生成完成",len(all_files))
 length_of_read=0
-for i in range(len(all_files)):
-    root, file=all_files[i]
-    data = ""
-    title = ""
-    try:
-        file_path = os.path.join(root, file)
-        _, ext = os.path.splitext(file_path)
-        if ext.lower() == '.pdf':
-            #pdf
-            with pdfplumber.open(file_path) as pdf:
-                data_list = []
-                for page in pdf.pages:
-                    print(page.extract_text())
-                    data_list.append(page.extract_text())
-                data = "\n".join(data_list)
-        elif ext.lower() == '.txt':
-            # txt
-            with open(file_path, 'rb') as f:
-                b = f.read()
-                result = chardet.detect(b)
-            with open(file_path, 'r', encoding=result['encoding']) as f:
-                data = f.read()
-        else:
-            print("目前还不支持文件格式：", ext)
-    except Exception as e:
-        print("文件读取失败，当前文件已被跳过：",file,"。错误信息：",e)
+# just one file in the folder, but csv, treat each line as a document
+root, file = all_files[0]
+data = ""
+title = ""
+# try:
+    # file_path = os.path.join(root, file)
+    # csv
+df = pd.read_csv(f'txt/{file}', encoding='utf-8')
+for i, row in df.iterrows():
+    data = str(row['title'])
     data = re.sub(r'！', "！\n", data)
     data = re.sub(r'：', "：\n", data)
     data = re.sub(r'。', "。\n", data)
@@ -114,10 +99,54 @@ for i in range(len(all_files)):
     length_of_read+=len(data)
     docs.append(Document(page_content=data, metadata={"source": file}))
     if length_of_read > 1e5:
-        success_print("处理进度",int(100*i/len(all_files)),f"%\t({i}/{len(all_files)})")
+        success_print("处理进度",int(100*i/len(df)),f"%\t({i}/{len(df)})")
         make_index()
         # print(embedding_lock.get_waiting_threads())
         length_of_read=0
+print("csv process finished!")
+# except Exception as e:
+#     print("文件读取失败，当前文件已被跳过：",file,"。错误信息：",e)
+
+# Original implementation
+# for i in range(len(all_files)):
+#     root, file=all_files[i]
+#     data = ""
+#     title = ""
+#     try:
+#         file_path = os.path.join(root, file)
+#         _, ext = os.path.splitext(file_path)
+#         if ext.lower() == '.pdf':
+#             #pdf
+#             with pdfplumber.open(file_path) as pdf:
+#                 data_list = []
+#                 for page in pdf.pages:
+#                     print(page.extract_text())
+#                     data_list.append(page.extract_text())
+#                 data = "\n".join(data_list)
+#         elif ext.lower() == '.txt':
+#             # txt
+#             with open(file_path, 'rb') as f:
+#                 b = f.read()
+#                 result = chardet.detect(b)
+#             with open(file_path, 'r', encoding=result['encoding']) as f:
+#                 data = f.read()
+#         else:
+#             print("目前还不支持文件格式：", ext)
+#     except Exception as e:
+#         print("文件读取失败，当前文件已被跳过：",file,"。错误信息：",e)
+#     data = re.sub(r'！', "！\n", data)
+#     data = re.sub(r'：', "：\n", data)
+#     data = re.sub(r'。', "。\n", data)
+#     data = re.sub(r'\r', "\n", data)
+#     data = re.sub(r'\n\n', "\n", data)
+#     data = re.sub(r"\n\s*\n", "\n", data)
+#     length_of_read+=len(data)
+#     docs.append(Document(page_content=data, metadata={"source": file}))
+#     if length_of_read > 1e5:
+#         success_print("处理进度",int(100*i/len(all_files)),f"%\t({i}/{len(all_files)})")
+#         make_index()
+#         # print(embedding_lock.get_waiting_threads())
+#         length_of_read=0
 
 
 if len(all_files) == 0:
