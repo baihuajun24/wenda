@@ -34,8 +34,11 @@ docs = []
 vectorstore = None
 
 model_path = settings.librarys.rtst.model_path
+print(dir(CharacterTextSplitter))
+print(f"0614 test: {model_path}")
 try:
     embeddings = HuggingFaceEmbeddings(model_name='')
+    # model = SentenceTransformer('moka-ai/m3e-base')
     embeddings.client = sentence_transformers.SentenceTransformer(
         model_path, device="cuda")
 except Exception as e:
